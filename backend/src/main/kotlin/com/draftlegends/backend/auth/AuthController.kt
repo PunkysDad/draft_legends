@@ -2,7 +2,6 @@ package com.draftlegends.backend.auth
 
 import com.draftlegends.backend.entity.User
 import com.draftlegends.backend.repository.UserRepository
-import com.google.firebase.auth.FirebaseAuth
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDateTime
@@ -16,15 +15,16 @@ data class AuthResponse(val token: String, val userId: Int, val displayName: Str
 class AuthController(
     private val userRepository: UserRepository,
     private val jwtUtil: JwtUtil,
+    private val googleTokenVerifier: GoogleTokenVerifier,
     private val appleTokenVerifier: AppleTokenVerifier
 ) {
 
     @PostMapping("/google")
     fun googleAuth(@RequestBody request: GoogleAuthRequest): ResponseEntity<AuthResponse> {
-        val decodedToken = FirebaseAuth.getInstance().verifyIdToken(request.idToken)
-        val googleUid = decodedToken.uid
-        val email = decodedToken.email
-        val displayName = decodedToken.name ?: email?.substringBefore("@")
+        val claims = googleTokenVerifier.verify(request.idToken)
+        val googleUid = claims.subject
+        val email = claims["email"] as? String
+        val displayName = claims["name"] as? String ?: email?.substringBefore("@")
 
         val user = userRepository.findByGoogleUid(googleUid)?.let { existing ->
             existing.lastLoginAt = LocalDateTime.now()
