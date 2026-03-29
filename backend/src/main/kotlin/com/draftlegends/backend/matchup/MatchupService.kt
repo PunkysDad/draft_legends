@@ -49,13 +49,16 @@ class MatchupService(
         }
 
         val isVsCpu = request.vsMode == "CPU"
-        val user1GoesFirst = Math.random() < 0.5
+        val humanGoesFirst = Math.random() < 0.5
+
+        // user1 always takes odd picks (1,3,5), user2 takes even picks (2,4,6)
+        // So whoever goes first must be user1.
         val user1Id: Int
         val user2Id: Int?
 
         if (isVsCpu) {
-            user1Id = if (user1GoesFirst) userId else CPU_USER_ID
-            user2Id = if (user1GoesFirst) CPU_USER_ID else userId
+            user1Id = if (humanGoesFirst) userId else CPU_USER_ID
+            user2Id = if (humanGoesFirst) CPU_USER_ID else userId
         } else {
             user1Id = userId
             user2Id = null
@@ -67,7 +70,7 @@ class MatchupService(
             user1Id = user1Id,
             user2Id = user2Id,
             isVsCpu = isVsCpu,
-            currentTurnUserId = if (isVsCpu) (if (user1GoesFirst) user1Id else user2Id) else null,
+            currentTurnUserId = if (isVsCpu) user1Id else null,
             pickDeadline = if (isVsCpu) LocalDateTime.now().plusSeconds(PICK_TIMEOUT_SECONDS) else null
         )
 
