@@ -33,6 +33,10 @@ dependencies {
     testRuntimeOnly("com.h2database:h2")
 }
 
+springBoot {
+    mainClass.set("com.draftlegends.backend.BackendApplicationKt")
+}
+
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
