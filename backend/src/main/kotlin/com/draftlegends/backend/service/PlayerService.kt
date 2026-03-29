@@ -88,7 +88,7 @@ class PlayerService(
 
         val total = results.fold(BigDecimal.ZERO) { acc, r ->
             acc + BigDecimal(r.scoringResult.totalPoints)
-        }
+        }.setScale(2, java.math.RoundingMode.HALF_UP)
 
         return RosterGameLogResponse(results = results, totalFantasyPoints = total)
     }
