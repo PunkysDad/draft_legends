@@ -18,3 +18,7 @@ jwt:
 
 apple:
   bundleId: ${APPLE_BUNDLE_ID:com.draftlegends.app}
+
+# Google OAuth client ID — must be set via GOOGLE_CLIENT_ID env var in production
+google:
+  clientId: ${GOOGLE_CLIENT_ID:your-google-client-id.apps.googleusercontent.com}
