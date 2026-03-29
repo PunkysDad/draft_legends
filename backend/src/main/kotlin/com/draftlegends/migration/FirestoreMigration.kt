@@ -38,7 +38,7 @@ class FirestoreMigration(
 
         val firestore = initializeFirestore()
 
-        val players = firestore.collection("players").get().get().documents
+        val players = firestore.collection("legends").get().get().documents
         println("Found ${players.size} players in Firestore")
 
         for (playerDoc in players) {
@@ -75,8 +75,11 @@ class FirestoreMigration(
         val position = doc.getString("position") ?: ""
         val photoUrl = doc.getString("photo")
         val seasonsPlayed = doc.getLong("seasonsPlayed")?.toInt()
-        val totalTouchdowns = doc.getLong("totalTouchdowns")?.toInt()
-        val totalInterceptions = doc.getLong("totalInterceptions")?.toInt()
+        val totalTouchdowns = when (position) {
+            "WR", "RB" -> doc.getLong("totalTds")?.toInt()
+            else -> doc.getLong("totalTouchdowns")?.toInt()
+        }
+        val totalInterceptions = if (position == "QB") doc.getLong("totalInterceptions")?.toInt() else null
 
         jdbcTemplate.update(
             """
@@ -124,38 +127,35 @@ class FirestoreMigration(
         val playerId = playerDoc.getLong("player_id")?.toInt() ?: return
         val position = playerDoc.getString("position") ?: return
 
-        // Try known subcollection names
-        val subcollectionNames = listOf("gameLogs", "game_logs", "gamelogs")
-        var gameLogs: List<QueryDocumentSnapshot> = emptyList()
+        val playerSeasonDoc = firestore.collection("legendseason")
+            .document(playerId.toString())
+        val seasonCollections = playerSeasonDoc.listCollections()
 
-        for (name in subcollectionNames) {
-            val docs = firestore.collection("players").document(playerDoc.id)
-                .collection(name).get().get().documents
-            if (docs.isNotEmpty()) {
-                gameLogs = docs
-                break
+        var totalGameLogs = 0
+
+        for (seasonCollection in seasonCollections) {
+            val season = seasonCollection.id.toIntOrNull()
+            val gameDocs = seasonCollection.get().get().documents
+
+            for (gameDoc in gameDocs) {
+                when (position) {
+                    "QB" -> migrateQbGameLog(gameDoc, playerId, position, season)
+                    "RB" -> migrateRbGameLog(gameDoc, playerId, position, season)
+                    "WR" -> migrateWrGameLog(gameDoc, playerId, position, season)
+                    else -> println("      Unknown position $position for player $playerId, skipping game log")
+                }
+                totalGameLogs++
             }
         }
 
-        if (gameLogs.isEmpty()) {
+        if (totalGameLogs == 0) {
             println("    No game logs found for player $playerId")
-            return
-        }
-
-        println("    Migrating ${gameLogs.size} game logs for player $playerId ($position)")
-
-        for (gameDoc in gameLogs) {
-            when (position) {
-                "QB" -> migrateQbGameLog(gameDoc, playerId, position)
-                "RB" -> migrateRbGameLog(gameDoc, playerId, position)
-                "WR" -> migrateWrGameLog(gameDoc, playerId, position)
-                else -> println("      Unknown position $position for player $playerId, skipping game log")
-            }
+        } else {
+            println("    Migrated $totalGameLogs game logs for player $playerId ($position)")
         }
     }
 
-    private fun migrateQbGameLog(doc: QueryDocumentSnapshot, playerId: Int, position: String) {
-        val season = doc.getLong("season")?.toInt()
+    private fun migrateQbGameLog(doc: QueryDocumentSnapshot, playerId: Int, position: String, season: Int?) {
         val week = doc.getLong("week")?.toInt()
         val gameDateStr = doc.getString("game_date")
         val gameDate = parseQbDate(gameDateStr, season)
@@ -164,9 +164,8 @@ class FirestoreMigration(
         val passCompletions = doc.getLong("comp")?.toInt()
         val completionPct = doc.getDouble("pct")?.toBigDecimal()
         val yardsPerAttempt = doc.getDouble("average")?.toBigDecimal()
-        val passYards = if (passAttempts != null && yardsPerAttempt != null) {
-            BigDecimal(passAttempts).multiply(yardsPerAttempt)
-        } else null
+        val passYards = doc.getDouble("yds")?.toBigDecimal()
+            ?: doc.getLong("yds")?.toBigDecimal()
         val passTds = doc.getLong("tds")?.toInt()
         val interceptions = doc.getLong("ints")?.toInt()
         val passerRating = doc.getDouble("rating")?.toBigDecimal()
@@ -192,15 +191,16 @@ class FirestoreMigration(
                 sacks = EXCLUDED.sacks,
                 fantasy_points = EXCLUDED.fantasy_points
             """.trimIndent(),
-            playerId, doc.id, season, week, gameDate, position,
+            playerId, "${playerId}_${season}_${doc.id}", season, week, gameDate, position,
             passAttempts, passCompletions, completionPct, yardsPerAttempt,
             passYards, passTds, interceptions, passerRating, sacks, fantasyPoints
         )
     }
 
-    private fun migrateRbGameLog(doc: QueryDocumentSnapshot, playerId: Int, position: String) {
-        // RB docs have no season or week fields
-        val gameDate: Date? = null // MM/DD format without year — cannot construct a valid DATE
+    private fun migrateRbGameLog(doc: QueryDocumentSnapshot, playerId: Int, position: String, season: Int?) {
+        val week = doc.getLong("week")?.toInt()
+        val gameDateStr = doc.getString("game_date")
+        val gameDate = parseRbDate(gameDateStr, season)
 
         val rushAttempts = doc.getLong("attempts")?.toInt()
         val rushYards = doc.getLong("rushing_yards")?.toBigDecimal()
@@ -235,7 +235,7 @@ class FirestoreMigration(
                 rec_tds = EXCLUDED.rec_tds,
                 fantasy_points = EXCLUDED.fantasy_points
             """.trimIndent(),
-            playerId, doc.id, null, null, gameDate, position,
+            playerId, "${playerId}_${season}_${doc.id}", season, week, gameDate, position,
             rushAttempts, rushYards, yardsPerCarry, rushLong, rushTds,
             receptions, recYards, yardsPerReception, recLong, recTds,
             fantasyPoints
@@ -243,12 +243,12 @@ class FirestoreMigration(
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun migrateWrGameLog(doc: QueryDocumentSnapshot, playerId: Int, position: String) {
+    private fun migrateWrGameLog(doc: QueryDocumentSnapshot, playerId: Int, position: String, season: Int?) {
         val game = doc.get("game") as? Map<String, Any> ?: return
 
         val dateStr = game["date"] as? String
         val gameDate = if (dateStr != null) Date.valueOf(LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE)) else null
-        val season = if (dateStr != null) LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE).year else null
+        val resolvedSeason = season ?: if (dateStr != null) LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE).year else null
         val week = (game["week"] as? Number)?.toInt()
 
         val wrReceptions = (game["receptions"] as? Number)?.toInt()
@@ -271,13 +271,27 @@ class FirestoreMigration(
                 yards_per_wr_reception = EXCLUDED.yards_per_wr_reception,
                 fantasy_points = EXCLUDED.fantasy_points
             """.trimIndent(),
-            playerId, doc.id, season, week, gameDate, position,
+            playerId, "${playerId}_${season}_${doc.id}", resolvedSeason, week, gameDate, position,
             wrReceptions, wrYards, wrTds, yardsPerWrReception,
             fantasyPoints
         )
     }
 
     private fun parseQbDate(dateStr: String?, season: Int?): Date? {
+        if (dateStr == null || season == null) return null
+        return try {
+            val parts = dateStr.split("/")
+            if (parts.size == 2) {
+                val month = parts[0].toInt()
+                val day = parts[1].toInt()
+                Date.valueOf(LocalDate.of(season, month, day))
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun parseRbDate(dateStr: String?, season: Int?): Date? {
         if (dateStr == null || season == null) return null
         return try {
             val parts = dateStr.split("/")

@@ -47,3 +47,11 @@ tasks.withType<KotlinCompile> {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+tasks.register<JavaExec>("migrationRun") {
+    group = "application"
+    description = "Run the Firestore to PostgreSQL migration"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.draftlegends.migration.FirestoreMigrationKt")
+    jvmArgs = listOf("-Dspring.profiles.active=migration")
+}
