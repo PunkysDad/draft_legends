@@ -20,6 +20,7 @@ CREATE TABLE player_seasons (
 
 CREATE TABLE game_logs (
     game_log_id          SERIAL PRIMARY KEY,
+    source_doc_id        VARCHAR(128),
     player_id            INT NOT NULL REFERENCES players(player_id),
     season               INT,
     week                 INT,
@@ -58,3 +59,6 @@ CREATE INDEX idx_game_logs_position ON game_logs(position);
 -- Prevent duplicate seasons per player
 ALTER TABLE player_seasons
     ADD CONSTRAINT uq_player_season UNIQUE (player_id, season);
+
+ALTER TABLE game_logs
+    ADD CONSTRAINT uq_game_log UNIQUE (player_id, source_doc_id);
