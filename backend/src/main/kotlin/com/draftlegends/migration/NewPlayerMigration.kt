@@ -14,7 +14,7 @@ import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
 
 @Component
-@Profile("migration")
+@Profile("migration & !mlb-migration")
 class NewPlayerMigration(
     private val jdbcTemplate: JdbcTemplate
 ) : ApplicationRunner {
