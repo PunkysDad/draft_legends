@@ -56,6 +56,18 @@ class WalletController(private val walletService: WalletService) {
         )
     }
 
+    @PostMapping("/daily-login")
+    fun dailyLogin(): ResponseEntity<WalletResponse> {
+        val wallet = walletService.grantDailyLoginBonus(currentUserId())
+        return ResponseEntity.ok(
+            WalletResponse(
+                walletId = wallet.walletId,
+                userId = wallet.userId,
+                balance = wallet.balance
+            )
+        )
+    }
+
     @PostMapping("/credit")
     fun credit(@RequestBody request: CreditRequest): ResponseEntity<WalletResponse> {
         val type = TransactionType.valueOf(request.type)

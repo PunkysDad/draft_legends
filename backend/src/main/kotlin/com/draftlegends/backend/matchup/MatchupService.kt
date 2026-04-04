@@ -3,6 +3,7 @@ package com.draftlegends.backend.matchup
 import com.draftlegends.backend.dto.*
 import com.draftlegends.backend.entity.*
 import com.draftlegends.backend.repository.*
+import com.draftlegends.backend.wallet.WalletService
 import com.draftlegends.scoring.ScoringEngine
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -19,7 +20,8 @@ class MatchupService(
     private val playerRepository: PlayerRepository,
     private val gameLogRepository: GameLogRepository,
     private val userRepository: UserRepository,
-    private val scoringEngine: ScoringEngine
+    private val scoringEngine: ScoringEngine,
+    private val walletService: WalletService
 ) {
     companion object {
         const val CPU_USER_ID = -1
@@ -267,6 +269,23 @@ class MatchupService(
         matchup.status = "COMPLETE"
         matchup.completedAt = LocalDateTime.now()
         matchupRepository.save(matchup)
+
+        val userIds = listOfNotNull(matchup.user1Id, matchup.user2Id)
+            .filter { it != CPU_USER_ID }
+
+        for (uid in userIds) {
+            walletService.grantFirstMatchBonus(uid.toLong())
+        }
+
+        val winnerId = matchup.winnerUserId
+        if (winnerId != null && winnerId != CPU_USER_ID) {
+            walletService.grantWinReward(winnerId.toLong(), matchup.mode)
+        }
+
+        val loserId = userIds.firstOrNull { it != winnerId }
+        if (loserId != null) {
+            walletService.grantLossConsolation(loserId.toLong(), matchup.mode)
+        }
     }
 
     private fun mapToScoringGameLog(gl: GameLog): com.draftlegends.scoring.GameLog {

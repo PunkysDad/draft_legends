@@ -6,6 +6,7 @@ import com.draftlegends.backend.repository.CoinTransactionRepository
 import com.draftlegends.backend.repository.WalletRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Service
@@ -72,19 +73,48 @@ class WalletService(
         return coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(userId)
     }
 
-    // TODO: Grant daily login bonus coins
-    fun grantDailyLoginBonus(userId: Long) {
+    @Transactional
+    fun grantDailyLoginBonus(userId: Long): Wallet {
+        val wallet = getOrCreateWallet(userId)
+        val today = LocalDate.now()
+
+        if (wallet.lastLoginBonusDate == today) {
+            return wallet
+        }
+
+        val updated = credit(userId, 50, TransactionType.DAILY_LOGIN, "Daily login bonus")
+        updated.lastLoginBonusDate = today
+        return walletRepository.save(updated)
     }
 
-    // TODO: Grant reward for winning a match
-    fun grantWinReward(userId: Long, gameMode: String) {
+    @Transactional
+    fun grantWinReward(userId: Long, gameMode: String): Wallet {
+        return when (gameMode) {
+            "QUICK_MATCH" -> credit(userId, 75, TransactionType.WIN_QUICK_MATCH, "Quick Match win reward")
+            "LEAGUE" -> credit(userId, 100, TransactionType.WIN_LEAGUE_MATCH, "League match win reward")
+            else -> getOrCreateWallet(userId)
+        }
     }
 
-    // TODO: Grant consolation coins for a loss
-    fun grantLossConsolation(userId: Long, gameMode: String) {
+    @Transactional
+    fun grantLossConsolation(userId: Long, gameMode: String): Wallet {
+        return when (gameMode) {
+            "QUICK_MATCH" -> credit(userId, 25, TransactionType.LOSE_QUICK_MATCH, "Quick Match loss consolation")
+            else -> getOrCreateWallet(userId)
+        }
     }
 
-    // TODO: Grant bonus for completing first match
-    fun grantFirstMatchBonus(userId: Long) {
+    @Transactional
+    fun grantFirstMatchBonus(userId: Long): Wallet {
+        val wallet = getOrCreateWallet(userId)
+        val today = LocalDate.now()
+
+        if (wallet.lastFirstMatchBonusDate == today) {
+            return wallet
+        }
+
+        val updated = credit(userId, 50, TransactionType.FIRST_MATCH_BONUS, "First match of the day bonus")
+        updated.lastFirstMatchBonusDate = today
+        return walletRepository.save(updated)
     }
 }

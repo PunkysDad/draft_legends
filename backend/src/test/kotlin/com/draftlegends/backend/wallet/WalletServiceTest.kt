@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import java.time.LocalDate
 
 @SpringBootTest
 class WalletServiceTest {
@@ -102,5 +103,125 @@ class WalletServiceTest {
         assertEquals("SPEND", history[0].transactionType)
         assertEquals("DAILY_LOGIN", history[1].transactionType)
         assertEquals("WELCOME_BONUS", history[2].transactionType)
+    }
+
+    @Test
+    fun `grantDailyLoginBonus credits 50 coins and sets lastLoginBonusDate to today`() {
+        val wallet = walletService.grantDailyLoginBonus(testUserId)
+
+        assertEquals(50, wallet.balance)
+        assertEquals(LocalDate.now(), wallet.lastLoginBonusDate)
+
+        val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
+        assertEquals(1, transactions.size)
+        assertEquals(50, transactions[0].amount)
+        assertEquals("DAILY_LOGIN", transactions[0].transactionType)
+        assertEquals("Daily login bonus", transactions[0].description)
+    }
+
+    @Test
+    fun `grantDailyLoginBonus called twice in the same day only credits once`() {
+        val first = walletService.grantDailyLoginBonus(testUserId)
+        val second = walletService.grantDailyLoginBonus(testUserId)
+
+        assertEquals(50, first.balance)
+        assertEquals(50, second.balance)
+
+        val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
+        assertEquals(1, transactions.size)
+    }
+
+    @Test
+    fun `grantDailyLoginBonus on a new day after a previous bonus grants again`() {
+        val wallet = walletService.grantDailyLoginBonus(testUserId)
+        assertEquals(50, wallet.balance)
+
+        // Simulate a previous day's bonus by backdating lastLoginBonusDate
+        wallet.lastLoginBonusDate = LocalDate.now().minusDays(1)
+        walletRepository.save(wallet)
+
+        val updated = walletService.grantDailyLoginBonus(testUserId)
+        assertEquals(100, updated.balance)
+        assertEquals(LocalDate.now(), updated.lastLoginBonusDate)
+
+        val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
+        assertEquals(2, transactions.size)
+    }
+
+    @Test
+    fun `grantWinReward Quick Match credits 75 coins with WIN_QUICK_MATCH type`() {
+        val wallet = walletService.grantWinReward(testUserId, "QUICK_MATCH")
+
+        assertEquals(75, wallet.balance)
+
+        val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
+        assertEquals(1, transactions.size)
+        assertEquals(75, transactions[0].amount)
+        assertEquals("WIN_QUICK_MATCH", transactions[0].transactionType)
+        assertEquals("Quick Match win reward", transactions[0].description)
+    }
+
+    @Test
+    fun `grantWinReward League credits 100 coins with WIN_LEAGUE_MATCH type`() {
+        val wallet = walletService.grantWinReward(testUserId, "LEAGUE")
+
+        assertEquals(100, wallet.balance)
+
+        val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
+        assertEquals(1, transactions.size)
+        assertEquals(100, transactions[0].amount)
+        assertEquals("WIN_LEAGUE_MATCH", transactions[0].transactionType)
+        assertEquals("League match win reward", transactions[0].description)
+    }
+
+    @Test
+    fun `grantLossConsolation Quick Match credits 25 coins with LOSE_QUICK_MATCH type`() {
+        val wallet = walletService.grantLossConsolation(testUserId, "QUICK_MATCH")
+
+        assertEquals(25, wallet.balance)
+
+        val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
+        assertEquals(1, transactions.size)
+        assertEquals(25, transactions[0].amount)
+        assertEquals("LOSE_QUICK_MATCH", transactions[0].transactionType)
+        assertEquals("Quick Match loss consolation", transactions[0].description)
+    }
+
+    @Test
+    fun `grantLossConsolation League returns wallet unchanged`() {
+        walletService.getOrCreateWallet(testUserId)
+
+        val wallet = walletService.grantLossConsolation(testUserId, "LEAGUE")
+
+        assertEquals(0, wallet.balance)
+
+        val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
+        assertEquals(0, transactions.size)
+    }
+
+    @Test
+    fun `grantFirstMatchBonus credits 50 coins and sets lastFirstMatchBonusDate to today`() {
+        val wallet = walletService.grantFirstMatchBonus(testUserId)
+
+        assertEquals(50, wallet.balance)
+        assertEquals(LocalDate.now(), wallet.lastFirstMatchBonusDate)
+
+        val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
+        assertEquals(1, transactions.size)
+        assertEquals(50, transactions[0].amount)
+        assertEquals("FIRST_MATCH_BONUS", transactions[0].transactionType)
+        assertEquals("First match of the day bonus", transactions[0].description)
+    }
+
+    @Test
+    fun `grantFirstMatchBonus called twice in the same day only credits once`() {
+        val first = walletService.grantFirstMatchBonus(testUserId)
+        val second = walletService.grantFirstMatchBonus(testUserId)
+
+        assertEquals(50, first.balance)
+        assertEquals(50, second.balance)
+
+        val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
+        assertEquals(1, transactions.size)
     }
 }

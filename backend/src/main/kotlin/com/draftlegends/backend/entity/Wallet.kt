@@ -1,6 +1,7 @@
 package com.draftlegends.backend.entity
 
 import jakarta.persistence.*
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Entity
@@ -21,5 +22,11 @@ data class Wallet(
     val createdAt: LocalDateTime = LocalDateTime.now(),
 
     @Column(name = "updated_at", nullable = false)
-    var updatedAt: LocalDateTime = LocalDateTime.now()
+    var updatedAt: LocalDateTime = LocalDateTime.now(),
+
+    @Column(name = "last_login_bonus_date")
+    var lastLoginBonusDate: LocalDate? = null,
+
+    @Column(name = "last_first_match_bonus_date")
+    var lastFirstMatchBonusDate: LocalDate? = null
 )
