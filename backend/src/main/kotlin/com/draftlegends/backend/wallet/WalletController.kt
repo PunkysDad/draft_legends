@@ -68,6 +68,18 @@ class WalletController(private val walletService: WalletService) {
         )
     }
 
+    @PostMapping("/ad-reward")
+    fun adReward(): ResponseEntity<WalletResponse> {
+        val wallet = walletService.grantAdReward(currentUserId())
+        return ResponseEntity.ok(
+            WalletResponse(
+                walletId = wallet.walletId,
+                userId = wallet.userId,
+                balance = wallet.balance
+            )
+        )
+    }
+
     @PostMapping("/credit")
     fun credit(@RequestBody request: CreditRequest): ResponseEntity<WalletResponse> {
         val type = TransactionType.valueOf(request.type)

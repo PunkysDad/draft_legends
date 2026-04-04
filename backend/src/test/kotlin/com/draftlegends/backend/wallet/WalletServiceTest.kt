@@ -224,4 +224,65 @@ class WalletServiceTest {
         val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
         assertEquals(1, transactions.size)
     }
+
+    @Test
+    fun `grantAdReward credits 60 coins with WATCH_AD type`() {
+        val wallet = walletService.grantAdReward(testUserId)
+
+        assertEquals(60, wallet.balance)
+        assertEquals(1, wallet.dailyAdRewardCount)
+        assertEquals(LocalDate.now(), wallet.lastAdRewardDate)
+
+        val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
+        assertEquals(1, transactions.size)
+        assertEquals(60, transactions[0].amount)
+        assertEquals("WATCH_AD", transactions[0].transactionType)
+        assertEquals("Rewarded video ad", transactions[0].description)
+    }
+
+    @Test
+    fun `grantAdReward can be called up to 5 times in one day`() {
+        repeat(5) {
+            walletService.grantAdReward(testUserId)
+        }
+
+        val wallet = walletRepository.findByUserId(testUserId).orElseThrow()
+        assertEquals(300, wallet.balance)
+        assertEquals(5, wallet.dailyAdRewardCount)
+
+        val transactions = coinTransactionRepository.findByUserIdOrderByCreatedAtDesc(testUserId)
+        assertEquals(5, transactions.size)
+    }
+
+    @Test
+    fun `grantAdReward throws DailyAdLimitReachedException on the 6th call in the same day`() {
+        repeat(5) {
+            walletService.grantAdReward(testUserId)
+        }
+
+        assertThrows(DailyAdLimitReachedException::class.java) {
+            walletService.grantAdReward(testUserId)
+        }
+
+        val wallet = walletRepository.findByUserId(testUserId).orElseThrow()
+        assertEquals(300, wallet.balance)
+        assertEquals(5, wallet.dailyAdRewardCount)
+    }
+
+    @Test
+    fun `grantAdReward resets count on a new day and allows rewards again`() {
+        repeat(5) {
+            walletService.grantAdReward(testUserId)
+        }
+
+        // Simulate previous day
+        val wallet = walletRepository.findByUserId(testUserId).orElseThrow()
+        wallet.lastAdRewardDate = LocalDate.now().minusDays(1)
+        walletRepository.save(wallet)
+
+        val updated = walletService.grantAdReward(testUserId)
+        assertEquals(360, updated.balance)
+        assertEquals(1, updated.dailyAdRewardCount)
+        assertEquals(LocalDate.now(), updated.lastAdRewardDate)
+    }
 }

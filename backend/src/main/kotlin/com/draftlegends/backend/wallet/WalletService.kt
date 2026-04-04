@@ -117,4 +117,24 @@ class WalletService(
         updated.lastFirstMatchBonusDate = today
         return walletRepository.save(updated)
     }
+
+    @Transactional
+    fun grantAdReward(userId: Long): Wallet {
+        val wallet = getOrCreateWallet(userId)
+        val today = LocalDate.now()
+
+        if (wallet.lastAdRewardDate == today && wallet.dailyAdRewardCount >= 5) {
+            throw DailyAdLimitReachedException("Daily ad reward limit reached (5/5)")
+        }
+
+        if (wallet.lastAdRewardDate != today) {
+            wallet.dailyAdRewardCount = 0
+            wallet.lastAdRewardDate = today
+        }
+
+        val updated = credit(userId, 60, TransactionType.WATCH_AD, "Rewarded video ad")
+        updated.dailyAdRewardCount = wallet.dailyAdRewardCount + 1
+        updated.lastAdRewardDate = today
+        return walletRepository.save(updated)
+    }
 }

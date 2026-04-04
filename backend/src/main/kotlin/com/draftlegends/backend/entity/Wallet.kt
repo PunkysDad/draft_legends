@@ -28,5 +28,11 @@ data class Wallet(
     var lastLoginBonusDate: LocalDate? = null,
 
     @Column(name = "last_first_match_bonus_date")
-    var lastFirstMatchBonusDate: LocalDate? = null
+    var lastFirstMatchBonusDate: LocalDate? = null,
+
+    @Column(name = "last_ad_reward_date")
+    var lastAdRewardDate: LocalDate? = null,
+
+    @Column(name = "daily_ad_reward_count", nullable = false)
+    var dailyAdRewardCount: Int = 0
 )
