@@ -7,6 +7,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.cloud.FirestoreClient
 import org.springframework.boot.CommandLineRunner
+import org.springframework.context.annotation.Profile
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.jdbc.core.JdbcTemplate
@@ -29,6 +30,7 @@ fun main(args: Array<String>) {
 }
 
 @Component
+@Profile("firestore-migration")
 class FirestoreMigration(
     private val jdbcTemplate: JdbcTemplate
 ) : CommandLineRunner {
