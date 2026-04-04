@@ -1,0 +1,14 @@
+first_name,last_name,position,avg_fantasy_points,volatility,salary,seasons_played,total_touchdowns
+Marshall,Faulk,RB,18.57,11.97,18.57,7,92
+Adrian,Peterson,RB,17.79,9.32,17.79,7,96
+Marvin,Harrison,WR,15.06,9.2,15.06,10,109
+Terrell,Owens,WR,14.96,9.36,14.96,12,132
+Larry,Fitzgerald,WR,13.75,7.47,13.75,10,96
+Andre,Johnson,WR,13.69,8.5,13.69,11,62
+Anquan,Boldin,WR,12.62,7.96,12.62,11,74
+Steve,Smith,WR,11.76,8.2,11.76,13,78
+Reggie,Wayne,WR,12.27,7.67,12.27,13,89
+Chad,Johnson,WR,11.41,8.34,11.41,11,67
+Calvin,Johnson,WR,15.47,9.32,15.47,7,69
+Isaac,Bruce,WR,11.29,7.43,11.29,11,65
+Hines,Ward,WR,11.03,7.34,11.03,13,96
