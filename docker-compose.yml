@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: draft_legends_user
       POSTGRES_PASSWORD: draft_legends_pass
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
