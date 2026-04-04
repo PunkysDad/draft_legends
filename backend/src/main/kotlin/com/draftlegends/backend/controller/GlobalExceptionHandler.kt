@@ -1,5 +1,7 @@
 package com.draftlegends.backend.controller
 
+import com.draftlegends.backend.wallet.DailyAdLimitReachedException
+import com.draftlegends.backend.wallet.InsufficientFundsException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -11,6 +13,30 @@ import org.springframework.web.server.ResponseStatusException
 class GlobalExceptionHandler {
 
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+
+    @ExceptionHandler(DailyAdLimitReachedException::class)
+    fun handleDailyAdLimitReached(ex: DailyAdLimitReachedException): ResponseEntity<Map<String, Any?>> {
+        logger.error("DailyAdLimitReachedException: ${ex.message}", ex)
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(
+            mapOf(
+                "status" to 429,
+                "error" to "DailyAdLimitReachedException",
+                "message" to ex.message
+            )
+        )
+    }
+
+    @ExceptionHandler(InsufficientFundsException::class)
+    fun handleInsufficientFunds(ex: InsufficientFundsException): ResponseEntity<Map<String, Any?>> {
+        logger.error("InsufficientFundsException: ${ex.message}", ex)
+        return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body(
+            mapOf(
+                "status" to 402,
+                "error" to "InsufficientFundsException",
+                "message" to ex.message
+            )
+        )
+    }
 
     @ExceptionHandler(ResponseStatusException::class)
     fun handleResponseStatusException(ex: ResponseStatusException): ResponseEntity<Map<String, Any?>> {
