@@ -60,3 +60,11 @@ tasks.register<JavaExec>("migrationRun") {
     mainClass.set("com.draftlegends.migration.FirestoreMigrationKt")
     jvmArgs = listOf("-Dspring.profiles.active=migration")
 }
+
+tasks.register<JavaExec>("mlbMigrationRun") {
+    group = "application"
+    description = "Run the MLB player data migration"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.draftlegends.migration.FirestoreMigrationKt")
+    jvmArgs = listOf("-Dspring.profiles.active=mlb-migration")
+}
