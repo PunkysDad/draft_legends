@@ -16,7 +16,10 @@ export default {
       },
       package: "com.draftlegends.app"
     },
-    plugins: ["expo-router"],
+    plugins: [
+      "expo-router",
+      "@react-native-google-signin/google-signin"
+    ],
     experiments: {
       typedRoutes: true
     }
