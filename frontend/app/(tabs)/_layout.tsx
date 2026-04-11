@@ -1,10 +1,14 @@
 import { Tabs } from 'expo-router';
+import CoinBalanceHeader from '../../components/CoinBalanceHeader';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        headerStyle: { backgroundColor: '#000' },
+        headerTintColor: '#fff',
+        headerRight: () => <CoinBalanceHeader />,
         tabBarStyle: { backgroundColor: '#111', borderTopColor: '#222' },
         tabBarActiveTintColor: '#FFD700',
         tabBarInactiveTintColor: '#666',
