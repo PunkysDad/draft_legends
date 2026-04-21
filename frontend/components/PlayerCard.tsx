@@ -8,14 +8,14 @@ const POSITION_COLORS: Record<string, string> = {
   WR: '#FF9800',
 };
 
-export default function PlayerCard({ player }: { player: Player }) {
+export default function PlayerCard({ player, onPress }: { player: Player; onPress?: () => void }) {
   const router = useRouter();
   const badgeColor = POSITION_COLORS[player.position] ?? '#aaa';
 
   return (
     <Pressable
       style={styles.card}
-      onPress={() => router.push(`/players/${player.playerId}`)}
+      onPress={onPress ?? (() => router.push(`/players/${player.playerId}`))}
     >
       <View style={styles.info}>
         <View style={styles.nameRow}>
